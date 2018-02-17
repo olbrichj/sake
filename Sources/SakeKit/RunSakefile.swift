@@ -78,8 +78,23 @@ public class RunSakefile {
         arguments += ["-I", filedescriptionLibraryPath.parent().normalize().string]
         arguments += ["-lSakefileDescription"]
         arguments += ["-lSwiftShell"]
+        
+        if let configPath = RunSakefile.sakeConfigFilePath(path: Path(path)) {
+            guard let sakeConfig = SakeConfig(configPath: configPath) else {
+                throw "SakeConfig is malformatted"
+            }
+            _ = sakeConfig.libraries.map { lib in
+                arguments += ["-framework ", lib.name]
+                arguments += ["-F", lib.path]
+            }
+        } else {
+            print("No configFile found at: \(Path(path))")
+        }
+        
         arguments += [sakefilePath.string]
         arguments += self.arguments
+        
+        
         do {
             let bashCommand = "swiftc \(arguments.joined(separator: " "))"
             try runBashCommand(bashCommand)
@@ -94,6 +109,14 @@ public class RunSakefile {
         let sakefilePath = (path + "Sakefile.swift").normalize()
         if sakefilePath.exists {
             return sakefilePath
+        }
+        return nil
+    }
+    
+    static func sakeConfigFilePath(path: Path) -> Path? {
+        let sakeConfigFilePath = (path + ".sakeconfig.json").normalize()
+        if sakeConfigFilePath.exists {
+            return sakeConfigFilePath
         }
         return nil
     }
